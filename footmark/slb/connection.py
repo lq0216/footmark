@@ -1001,6 +1001,24 @@ class SLBConnection(ACSQueryConnection):
         self.build_list_params(params, load_balancer_id, 'LoadBalancerId')
 
         return self.get_object('DescribeLoadBalancerAttribute', params, LoadBalancer)
+    
+    def describe_load_balancers(self, load_balancer_id = None, Load_balancer_name = None):
+        """
+        Describe attributes of Load Balancer
+        :type load_balancer_id: string
+        :param load_balancer_id: id of the load balancer
+        :type Load_balancer_name: string
+        :param Load_balancer_name: name of the load balancer
+        :return: load balance attributes in dictionary format if found else None
+        """
+
+        params = {}
+        if load_balancer_id:
+            self.build_list_params(params, load_balancer_id, 'LoadBalancerId')
+        if Load_balancer_name:
+            self.build_list_params(params, Load_balancer_name, 'LoadBalancerName')
+
+        return self.get_list('DescribeLoadBalancers', params,  ['Load_balancers', LoadBalancer])
 
     def create_vserver_group(self, load_balancer_id, vserver_group_name, backend_servers):
         """
