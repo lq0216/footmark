@@ -1018,6 +1018,8 @@ class SLBConnection(ACSQueryConnection):
         if Load_balancer_name:
             self.build_list_params(params, Load_balancer_name, 'LoadBalancerName')
         res = self.get_list('DescribeLoadBalancers', params,  ['LoadBalancers', LoadBalancer])
+        print res
+        print "##################"
         print type(res)
         print dir(res)
         return res
