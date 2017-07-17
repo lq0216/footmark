@@ -1018,8 +1018,8 @@ class SLBConnection(ACSQueryConnection):
         if Load_balancer_name:
             self.build_list_params(params, Load_balancer_name, 'LoadBalancerName')
 
-        return self.get_list('DescribeLoadBalancers', params,  ['Load_balancers', LoadBalancer])
-
+        #return self.get_list('DescribeLoadBalancers', params,  ['Load_balancers', LoadBalancer])
+        return self.get_object('DescribeLoadBalancers', params,  LoadBalancer)
     def create_vserver_group(self, load_balancer_id, vserver_group_name, backend_servers):
         """
         Create a VServer Group
