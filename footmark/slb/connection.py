@@ -94,6 +94,7 @@ class SLBConnection(ACSQueryConnection):
             self.build_list_params(params, bandwidth, 'Bandwidth')
                                        
         res_obj = self.get_object('CreateLoadBalancer', params, LoadBalancer)
+        print dir(res_obj)
 
         slb_id = str(results[0][u'LoadBalancerId'])
         # if listener param is available then create listener
@@ -143,8 +144,6 @@ class SLBConnection(ACSQueryConnection):
 
         if str(wait).lower() in ['yes', 'true'] and wait_timeout > 0:
             time.sleep(wait_timeout)
-        
-        print dir(res_obj)
 
         return res_obj
 
