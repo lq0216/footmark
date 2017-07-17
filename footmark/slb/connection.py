@@ -93,69 +93,58 @@ class SLBConnection(ACSQueryConnection):
         if bandwidth:
             self.build_list_params(params, bandwidth, 'Bandwidth')
                                        
-        try:
-            response = self.get_status('CreateLoadBalancer', params)
-            results.append(response)
-            changed = True
-        except Exception as ex:
-            error_code = ex.error_code
-            error_msg = ex.message
-            if (str(ex.error_code) == "InvalidParameter") and (str(ex.message) == "The site is not exist. "):
-                results.append({"Error Code": error_code,
-                                "Error Message": "Specified master_zone_id or slave_zone_id is not exist."})
-            else:
-                results.append({"Error Code": error_code, "Error Message": error_msg})
-        else:
-            slb_id = str(results[0][u'LoadBalancerId'])
-            # if listener param is available then create listener
-            if slb_id and listeners:
-                for listener in listeners:
-                    if listener:
-                        if 'protocol' in listener:
-                            protocol = str(listener['protocol']).lower()
-                            # Add HTTP Listener to Load Balancer
-                            if protocol in ['http']:
-                                listener_result = self.create_load_balancer_http_listener(slb_id, listener)
-                                if listener_result:
-                                    results.append({"http_listener_result": listener_result[1]})
+        res_obj = self.get_object('CreateLoadBalancer', params, LoadBalancer)
 
-                            # Add HTTPS Listener to Load Balancer
-                            elif protocol in ['https']:
-                                listener_result = self.create_load_balancer_https_listener(slb_id, listener)
-                                if listener_result:
-                                    results.append({"https_listener_result": listener_result[1]})
+        slb_id = str(results[0][u'LoadBalancerId'])
+        # if listener param is available then create listener
+        if slb_id and listeners:
+            for listener in listeners:
+                if listener:
+                    if 'protocol' in listener:
+                        protocol = str(listener['protocol']).lower()
+                        # Add HTTP Listener to Load Balancer
+                        if protocol in ['http']:
+                            listener_result = self.create_load_balancer_http_listener(slb_id, listener)
+                            if listener_result:
+                                results.append({"http_listener_result": listener_result[1]})
 
-                            # Add TCP Listener to Load Balancer
-                            elif protocol in ['tcp']:
-                                listener_result = self.create_load_balancer_tcp_listener(slb_id, listener)
-                                if listener_result:
-                                    results.append({"tcp_listener_result": listener_result[1]})
+                        # Add HTTPS Listener to Load Balancer
+                        elif protocol in ['https']:
+                            listener_result = self.create_load_balancer_https_listener(slb_id, listener)
+                            if listener_result:
+                                results.append({"https_listener_result": listener_result[1]})
 
-                            # Add UDP Listener to Load Balancer
-                            elif protocol in ['udp']:
-                                listener_result = self.create_load_balancer_udp_listener(slb_id, listener)
-                                if listener_result:
-                                    results.append({"udp_listener_result": listener_result[1]})
-                            else:
-                                results.append({"Error Message": "Invalid Listener Protocol " + listener['protocol']})
+                        # Add TCP Listener to Load Balancer
+                        elif protocol in ['tcp']:
+                            listener_result = self.create_load_balancer_tcp_listener(slb_id, listener)
+                            if listener_result:
+                                results.append({"tcp_listener_result": listener_result[1]})
 
-                if instance_ids:
-                    if len(instance_ids) > 0:     
-                        backend_servers = []
+                        # Add UDP Listener to Load Balancer
+                        elif protocol in ['udp']:
+                            listener_result = self.create_load_balancer_udp_listener(slb_id, listener)
+                            if listener_result:
+                                results.append({"udp_listener_result": listener_result[1]})
+                        else:
+                            results.append({"Error Message": "Invalid Listener Protocol " + listener['protocol']})
 
-                        # Add Backend Serves to Load Balancer
-                        for backend_server_id in instance_ids:
-                            backend_servers.append({"server_id": backend_server_id, "weight": 100})
+            if instance_ids:
+                if len(instance_ids) > 0:     
+                    backend_servers = []
 
-                        backend_server_result = self.add_backend_servers(slb_id, backend_servers)
+                    # Add Backend Serves to Load Balancer
+                    for backend_server_id in instance_ids:
+                        backend_servers.append({"server_id": backend_server_id, "weight": 100})
 
-                        if backend_server_result:
-                            results.append({"backend_server_result": backend_server_result})
+                    backend_server_result = self.add_backend_servers(slb_id, backend_servers)
+
+                    if backend_server_result:
+                        results.append({"backend_server_result": backend_server_result})
 
         if str(wait).lower() in ['yes', 'true'] and wait_timeout > 0:
             time.sleep(wait_timeout)
 
-        return changed, results
+        return res_obj
 
     def add_listeners(self, load_balancer_id, purge_listener=None, listeners=None):
         """
