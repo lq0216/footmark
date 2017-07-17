@@ -143,6 +143,8 @@ class SLBConnection(ACSQueryConnection):
 
         if str(wait).lower() in ['yes', 'true'] and wait_timeout > 0:
             time.sleep(wait_timeout)
+        
+        print dir(res_obj)
 
         return res_obj
 
