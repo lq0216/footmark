@@ -77,6 +77,7 @@ class SLBConnection(ACSQueryConnection):
         params = {}
         results = []
         changed = False
+        slb_id = ""
 
         if load_balancer_name:
             self.build_list_params(params, load_balancer_name, 'LoadBalancerName')
@@ -94,9 +95,10 @@ class SLBConnection(ACSQueryConnection):
             self.build_list_params(params, bandwidth, 'Bandwidth')
                                        
         res_obj = self.get_object('CreateLoadBalancer', params, LoadBalancer)
-        print dir(res_obj)
+        
+        if res_obj.load_balancer_id:
 
-        slb_id = str(results[0][u'LoadBalancerId'])
+            slb_id = res_obj.load_balancer_id
         # if listener param is available then create listener
         if slb_id and listeners:
             for listener in listeners:
