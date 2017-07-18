@@ -60,7 +60,6 @@ class SLBConnection(ACSQueryConnection):
         """
 
         params = {}
-        results = []
         changed = False
 
         if load_balancer_name:
@@ -78,9 +77,8 @@ class SLBConnection(ACSQueryConnection):
         if bandwidth:
             self.build_list_params(params, bandwidth, 'Bandwidth')
                                        
-        changed = self.get_object('CreateLoadBalancer', params, LoadBalancer)
-        results.append("Create load balancer success")
-        
+        results = self.get_object('CreateLoadBalancer', params, LoadBalancer)
+        changed = True     
         return changed, results
         
 
