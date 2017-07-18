@@ -37,9 +37,7 @@ class SLBConnection(ACSQueryConnection):
                                             self.region, self.SLBSDK, security_token, user_agent=user_agent)
 
     def create_load_balancer(self, load_balancer_name=None, address_type=None, vswitch_id=None,
-                             internet_charge_type=None, master_zone_id=None, slave_zone_id=None, bandwidth=None,
-                             listeners=None, instance_ids=None, validate_cert=None, tags=None, wait=None,
-                             wait_timeout=None):
+                             internet_charge_type=None, master_zone_id=None, slave_zone_id=None, bandwidth=None):
         """
         Creates a Server Load Balancer
         :type load_balancer_name: string
@@ -58,26 +56,12 @@ class SLBConnection(ACSQueryConnection):
         :param slave_zone_id: Name of of availability zones to enable on this SLB
         :type bandwidth: string
         :param bandwidth: Bandwidth peak of the public network instance charged per fixed bandwidth
-        :type listeners: dict
-        :param listeners: List of ports/protocols for this SLB to listen on
-        :type instance_ids: list
-        :param instance_ids: A list of identifier for this instance or set of instances, so that the module will be
-        :type validate_cert: string
-        :param validate_cert: When set to "no", SSL certificates will not be validated. default: "yes"
-        :type tags: list
-        :param tags: A list of hash/dictionaries of load balancer tags, '[{tag_key:"value", tag_value:"value"}]',
-         tag_key must be not null when tag_value isn't null
-        :type wait: string
-        :param wait: after execution of method whether it has to wait for some time interval
-        :type wait_timeout: int
-        :param wait_timeout: time interval of waiting
         :return: return the created load balancer details
         """
 
         params = {}
         results = []
         changed = False
-        slb_id = ""
 
         if load_balancer_name:
             self.build_list_params(params, load_balancer_name, 'LoadBalancerName')
@@ -94,60 +78,11 @@ class SLBConnection(ACSQueryConnection):
         if bandwidth:
             self.build_list_params(params, bandwidth, 'Bandwidth')
                                        
-        res_obj = self.get_object('CreateLoadBalancer', params, LoadBalancer)
+        changed = self.get_object('CreateLoadBalancer', params, LoadBalancer)
+        results.append["Create load balancer success"]
         
-        if res_obj.load_balancer_id:
-
-            slb_id = res_obj.load_balancer_id
-        # if listener param is available then create listener
-        if slb_id and listeners:
-            for listener in listeners:
-                if listener:
-                    if 'protocol' in listener:
-                        protocol = str(listener['protocol']).lower()
-                        # Add HTTP Listener to Load Balancer
-                        if protocol in ['http']:
-                            listener_result = self.create_load_balancer_http_listener(slb_id, listener)
-                            if listener_result:
-                                results.append({"http_listener_result": listener_result[1]})
-
-                        # Add HTTPS Listener to Load Balancer
-                        elif protocol in ['https']:
-                            listener_result = self.create_load_balancer_https_listener(slb_id, listener)
-                            if listener_result:
-                                results.append({"https_listener_result": listener_result[1]})
-
-                        # Add TCP Listener to Load Balancer
-                        elif protocol in ['tcp']:
-                            listener_result = self.create_load_balancer_tcp_listener(slb_id, listener)
-                            if listener_result:
-                                results.append({"tcp_listener_result": listener_result[1]})
-
-                        # Add UDP Listener to Load Balancer
-                        elif protocol in ['udp']:
-                            listener_result = self.create_load_balancer_udp_listener(slb_id, listener)
-                            if listener_result:
-                                results.append({"udp_listener_result": listener_result[1]})
-                        else:
-                            results.append({"Error Message": "Invalid Listener Protocol " + listener['protocol']})
-
-            if instance_ids:
-                if len(instance_ids) > 0:     
-                    backend_servers = []
-
-                    # Add Backend Serves to Load Balancer
-                    for backend_server_id in instance_ids:
-                        backend_servers.append({"server_id": backend_server_id, "weight": 100})
-
-                    backend_server_result = self.add_backend_servers(slb_id, backend_servers)
-
-                    if backend_server_result:
-                        results.append({"backend_server_result": backend_server_result})
-
-        if str(wait).lower() in ['yes', 'true'] and wait_timeout > 0:
-            time.sleep(wait_timeout)
-
-        return res_obj
+        return changed, results
+        
 
     def add_listeners(self, load_balancer_id, purge_listener=None, listeners=None):
         """
@@ -871,15 +806,17 @@ class SLBConnection(ACSQueryConnection):
         :return: return name of the operating interface, which is
             specified in the system
         """
-
+        changed = False
+        results = []
         params = {}
        
         self.build_list_params(params, load_balancer_id, 'LoadBalancerId')        
-        
         self.build_list_params(params, load_balancer_status, 'LoadBalancerStatus')
         
-        return self.get_status('SetLoadBalancerStatus', params)
-
+        changed = self.get_status('SetLoadBalancerStatus', params)
+        results.append("set load balance status success")
+        return changed, results
+        
     def set_load_balancer_name(self, load_balancer_id, load_balancer_name):
         """
         Set name or alias to the ServerLoadBalancer
@@ -891,11 +828,15 @@ class SLBConnection(ACSQueryConnection):
          specified, an instance name is allocated by the system by default.
         :return: returns the request_id of request
         """
- 
+        changed = False
+        results = []
         params = {}
         self.build_list_params(params, load_balancer_id, 'LoadBalancerId')
         self.build_list_params(params, load_balancer_name, 'LoadBalancerName')
-        return self.get_status('SetLoadBalancerName', params)
+        changed = self.get_status('SetLoadBalancerName', params)
+        results.append("set load balancer name")
+        
+        return changed, results
 
     def delete_load_balancer(self, slb_id):
         """
@@ -914,26 +855,25 @@ class SLBConnection(ACSQueryConnection):
         Modify internet specifications of existing LoadBalancer, like internet_charge_type or bandwidth
         :type load_balancer_id: str
         :param load_balancer_id: The unique ID of an Server Load Balancer instance
-
         :type internet_charge_type: str
         :param internet_charge_type: Charging mode for the public network instance
-
         :type bandwidth: str
         :param bandwidth: Bandwidth peak of the public network instance charged per fixed bandwidth
-
         :return: returns the request_id of request
         """
-
+        
+        results = []
+        changed = False
         params = {}  
 
         self.build_list_params(params, load_balancer_id, 'LoadBalancerId')
-
         if internet_charge_type:
             self.build_list_params(params, internet_charge_type, 'InternetChargeType')
-
         if bandwidth:
             self.build_list_params(params, bandwidth, 'Bandwidth')
-        return self.get_status('ModifyLoadBalancerInternetSpec', params)
+        changed = self.get_status('ModifyLoadBalancerInternetSpec', params)
+        results.append("modify load balancer name success")
+        return changed, results
     
 
     def describe_load_balancer_attribute(self, load_balancer_id):
@@ -952,12 +892,12 @@ class SLBConnection(ACSQueryConnection):
     
     def describe_load_balancers(self, load_balancer_id = None, Load_balancer_name = None):
         """
-        Describe attributes of Load Balancer
+        Describe Load Balancers
         :type load_balancer_id: string
         :param load_balancer_id: id of the load balancer
         :type Load_balancer_name: string
         :param Load_balancer_name: name of the load balancer
-        :return: load balance attributes in dictionary format if found else None
+        :return: load balance in dictionary format if found else None
         """
 
         params = {}
