@@ -845,11 +845,15 @@ class SLBConnection(ACSQueryConnection):
         :param slb_id: Id of the server load balancer
         :return: Return status of Operation
         """
+        changed = False
+        results = []
         params = {}
 
         self.build_list_params(params, slb_id, 'LoadBalancerId')
-        return self.get_status('DeleteLoadBalancer', params)   
-    
+        changed =  self.get_status('DeleteLoadBalancer', params)   
+        results.append("delete success")
+        return changed, results
+        
     def modify_slb_internet_spec(self, load_balancer_id, internet_charge_type=None, bandwidth=None):
         """
         Modify internet specifications of existing LoadBalancer, like internet_charge_type or bandwidth
