@@ -890,7 +890,7 @@ class SLBConnection(ACSQueryConnection):
 
         return self.get_object('DescribeLoadBalancerAttribute', params, LoadBalancer)
     
-    def describe_load_balancers(self, load_balancer_id = None, Load_balancer_name = None):
+    def describe_load_balancers(self, load_balancer_id = None, load_balancer_name = None):
         """
         Describe Load Balancers
         :type load_balancer_id: string
@@ -903,8 +903,8 @@ class SLBConnection(ACSQueryConnection):
         params = {}
         if load_balancer_id:
             self.build_list_params(params, load_balancer_id, 'LoadBalancerId')
-        if Load_balancer_name:
-            self.build_list_params(params, Load_balancer_name, 'LoadBalancerName')
+        if load_balancer_name:
+            self.build_list_params(params, load_balancer_name, 'LoadBalancerName')
         return self.get_list('DescribeLoadBalancers', params,  ['LoadBalancers', LoadBalancer])
 
         
