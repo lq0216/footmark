@@ -79,7 +79,7 @@ class SLBConnection(ACSQueryConnection):
             self.build_list_params(params, bandwidth, 'Bandwidth')
                                        
         changed = self.get_object('CreateLoadBalancer', params, LoadBalancer)
-        results.append["Create load balancer success"]
+        results.append("Create load balancer success")
         
         return changed, results
         
