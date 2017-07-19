@@ -80,8 +80,7 @@ class SLBConnection(ACSQueryConnection):
                                        
         res_obj = self.get_object('CreateLoadBalancer', params, LoadBalancer)
 
-        result = dict(load_balancer_name=res_obj.load_balancer_name,\
-                  load_balancer_id=res_obj.load_balancer_id,\
+        result = dict(load_balancer_id=res_obj.load_balancer_id,\
                   address=res_obj.address,\
                   network_type=res_obj.network_type)
         changed = True     
