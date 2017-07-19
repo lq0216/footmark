@@ -61,7 +61,6 @@ class SLBConnection(ACSQueryConnection):
 
         params = {}
         result = {}
-        changed = False
 
         if load_balancer_name:
             self.build_list_params(params, load_balancer_name, 'LoadBalancerName')
@@ -83,8 +82,8 @@ class SLBConnection(ACSQueryConnection):
         result = dict(load_balancer_id=res_obj.load_balancer_id,\
                   address=res_obj.address,\
                   network_type=res_obj.network_type)
-        changed = True     
-        return changed, result
+    
+        return  result
         
 
     def add_listeners(self, load_balancer_id, purge_listener=None, listeners=None):
@@ -809,7 +808,6 @@ class SLBConnection(ACSQueryConnection):
         :return: return name of the operating interface, which is
             specified in the system
         """
-        changed = False
         results = []
         params = {}
        
@@ -818,7 +816,7 @@ class SLBConnection(ACSQueryConnection):
         
         changed = self.get_status('SetLoadBalancerStatus', params)
         results.append("set load balance status success")
-        return changed, results
+        return  results
         
     def set_load_balancer_name(self, load_balancer_id, load_balancer_name):
         """
@@ -839,7 +837,7 @@ class SLBConnection(ACSQueryConnection):
         changed = self.get_status('SetLoadBalancerName', params)
         results.append("set load balancer name")
         
-        return changed, results
+        return  results
 
     def delete_load_balancer(self, slb_id):
         """
@@ -848,14 +846,13 @@ class SLBConnection(ACSQueryConnection):
         :param slb_id: Id of the server load balancer
         :return: Return status of Operation
         """
-        changed = False
         results = []
         params = {}
 
         self.build_list_params(params, slb_id, 'LoadBalancerId')
         changed =  self.get_status('DeleteLoadBalancer', params)   
         results.append("delete success")
-        return changed, results
+        return  results
         
     def modify_slb_internet_spec(self, load_balancer_id, internet_charge_type=None, bandwidth=None):
         """
@@ -870,7 +867,7 @@ class SLBConnection(ACSQueryConnection):
         """
         
         results = []
-        changed = False
+     
         params = {}  
 
         self.build_list_params(params, load_balancer_id, 'LoadBalancerId')
@@ -878,9 +875,9 @@ class SLBConnection(ACSQueryConnection):
             self.build_list_params(params, internet_charge_type, 'InternetChargeType')
         if bandwidth:
             self.build_list_params(params, bandwidth, 'Bandwidth')
-        changed = self.get_status('ModifyLoadBalancerInternetSpec', params)
+        self.get_status('ModifyLoadBalancerInternetSpec', params)
         results.append("modify load balancer spec success")
-        return changed, results
+        return  results
     
 
     def describe_load_balancer_attribute(self, load_balancer_id):
