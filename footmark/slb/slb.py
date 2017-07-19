@@ -24,7 +24,7 @@ class LoadBalancer(TaggedSLBObject):
         if name == 'id':
             self.load_balancer_id = value
         if name == 'name':
-            self.load_balancer_name = name
+            self.load_balancer_name = value
         super(TaggedSLBObject, self).__setattr__(name, value)
     
     def set_status(self, load_balancer_status):
