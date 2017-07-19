@@ -20,10 +20,6 @@ class LoadBalancer(TaggedSLBObject):
             return self.load_balancer_name
         if name == 'address':
             return self.address
-        if name == 'network_type':
-            return self.network_type
-        if name == 'region':
-            return self.region
         raise AttributeError
 
     def __setattr__(self, name, value):
@@ -31,10 +27,6 @@ class LoadBalancer(TaggedSLBObject):
             self.load_balancer_id = value
         if name == 'name':
             self.load_balancer_name = value
-        if name == 'region':
-            self.region = value
-        if name == 'network_type':
-            self.network_type = value
         if name == 'address':
             self.address = value
         super(TaggedSLBObject, self).__setattr__(name, value)
