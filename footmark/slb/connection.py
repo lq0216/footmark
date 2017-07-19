@@ -880,7 +880,7 @@ class SLBConnection(ACSQueryConnection):
         if bandwidth:
             self.build_list_params(params, bandwidth, 'Bandwidth')
         changed = self.get_status('ModifyLoadBalancerInternetSpec', params)
-        results.append("modify load balancer name success")
+        results.append("modify load balancer spec success")
         return changed, results
     
 
