@@ -79,8 +79,6 @@ class SLBConnection(ACSQueryConnection):
             self.build_list_params(params, bandwidth, 'Bandwidth')
                                        
         res_obj = self.get_object('CreateLoadBalancer', params, LoadBalancer)
-        print dir(res_obj)
-        print type(res_obj)
 
         result = dict(load_balancer_name=res_obj.load_balancer_name,\
                   load_balancer_id=res_obj.load_balancer_id,\
