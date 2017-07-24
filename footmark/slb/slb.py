@@ -17,6 +17,8 @@ class LoadBalancer(TaggedSLBObject):
         if name == 'id':
             return self.load_balancer_id
         if name == 'name':
+            if not self.load_balancer_name:
+                self.load_balancer_name = ""
             return self.load_balancer_name
         raise AttributeError
 
