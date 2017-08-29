@@ -11,7 +11,7 @@ import json
 
 from footmark.connection import ACSQueryConnection
 from footmark.rds.regioninfo import RegionInfo
-from footmark.rds.rds import Account
+from footmark.rds.rds import Account, Instance
 from footmark.resultset import ResultSet
 from footmark.exception import RDSResponseError
 
@@ -40,35 +40,33 @@ class RDSConnection(ACSQueryConnection):
                                             acs_secret_access_key,
                                             self.region, self.RDSSDK, security_token, user_agent=user_agent)
 
-    def create_rds_instance(self, db_engine, engine_version, db_instance_class, db_instance_storage,
-                            instance_net_type, security_ip_list, pay_type, period=None,zone=None,
-                            instance_description=None, used_time=None, instance_network_type=None, connection_mode=None,
-                            vpc_id=None, vswitch_id=None, private_ip_address=None, allocate_public_ip=False,
-                            connection_string_prefix=None, public_port=None, db_name=None, db_description=None,
-                            character_set_name=None, maint_window=None, preferred_backup_time=None,
-                            preferred_backup_period=None, backup_retention_period=None, db_tags=None, wait=None,
-                            wait_timeout=None):
+    def create_rds_instance(self, engine, engine_version, db_instance_class, db_instance_storage,
+                            db_instance_net_type, security_ip_list, pay_type, client_token=None, period=None, alicloud_zone=None,
+                            db_instance_description=None, used_time=None, instance_network_type=None, connection_mode=None,
+                            vpc_id=None, vswitch_id=None, private_ip_address=None):
         """
          Create RDS Instance
 
-         :type zone: string
-         :param zone:  ID of a zone to which an instance belongs
-         :type db_engine: string
-         :param db_engine: The type of database
+         :type alicloud_zone: string
+         :param alicloud_zone:  ID of a zone to which an instance belongs
+         :type engine: string
+         :param engine: The type of database
          :type engine_version: string
          :param engine_version: Version number of the database engine to use
          :type db_instance_class: string
          :param db_instance_class: The instance type of the database.
          :type db_instance_storage: integer
          :param db_instance_storage: Size in gigabytes of the initial storage for the DB instance.
-         :type instance_net_type: string
-         :param instance_net_type: The net type of the DB instance
-         :type instance_description: string
-         :param instance_description: Instance description or remarks, no more than 256 bytes.
+         :type db_instance_net_type: string
+         :param db_instance_net_type: The net type of the DB instance
+         :type db_instance_description: string
+         :param db_instance_description: Instance description or remarks, no more than 256 bytes.
          :type security_ip_list: string
          :param security_ip_list: List of IP addresses allowed to access all databases of an instance.
          :type pay_type: string
          :param pay_type: The pay type of the DB instance.
+         :type client_token: string
+         :param client_token: Used to ensure idempotency.
          :type period: string
          :param period: Period of the instance if pay_type set to prepaid.
          :type used_time: integer
@@ -83,60 +81,27 @@ class RDSConnection(ACSQueryConnection):
          :param vswitch_id: ID of VSwitch
          :type private_ip_address: string
          :param private_ip_address: IP address of an VPC under VSwitchId.
-         :type allocate_public_ip: string
-         :param allocate_public_ip: Whether to allocate public IP
-         :type connection_string_prefix: string
-         :param connection_string_prefix: Prefix of an Internet connection string
-         :type public_port: integer
-         :param public_port: The public connection port.
-         :type db_name: string
-         :param db_name: Name of a database to create within the instance.
-         :type db_description: string
-         :param db_description: Description of a database to create within the instance.
-         :type character_set_name: string
-         :param character_set_name: Associate the DB instance with a specified character set.
-         :type maint_window: string
-         :param maint_window: Maintenance window in format of ddd:hh24:mi-ddd:hh24:mi.
-         :type preferred_backup_time: string
-         :param preferred_backup_time: Backup time, in the format of HH:mmZ- HH:mm Z.
-         :type preferred_backup_period: string
-         :param preferred_backup_period: Backup period.
-         :type backup_retention_period: integer
-         :param backup_retention_period: Retention days of the backup
-         :type db_tags: dict
-         :param db_tags: A list of hash/dictionaries of db tags
-         :type db_engine: string
-         :param wait: Wait for the RDS instance to be 'running' before returning.
-         :type wait_timeout: integer
-         :param wait_timeout: how long before wait gives up, in seconds
          :return:
              changed: If instance is created successfully the changed will be set
                  to True else False
              DBInstanceId: the newly created instance id
          """
         params = {}
-        results = []
-        flag = False
-        changed = False
-
-        if zone:
-            self.build_list_params(params, zone, 'ZoneId')
-        if db_engine:
-            self.build_list_params(params, db_engine, 'Engine')
-        if engine_version:
-            self.build_list_params(params, engine_version, 'EngineVersion')
-        if db_instance_class:
-            self.build_list_params(params, db_instance_class, 'DBInstanceClass')
-        if db_instance_storage:
-            self.build_list_params(params, db_instance_storage, 'DBInstanceStorage')
-        if instance_net_type:
-            self.build_list_params(params, instance_net_type, 'DBInstanceNetType')
-        if instance_description:
+        res = None
+        result = None
+        self.build_list_params(params, engine, 'Engine')
+        self.build_list_params(params, engine_version, 'EngineVersion')
+        self.build_list_params(params, db_instance_class, 'DBInstanceClass')
+        self.build_list_params(params, db_instance_storage, 'DBInstanceStorage')
+        self.build_list_params(params, db_instance_net_type, 'DBInstanceNetType')
+        self.build_list_params(params, security_ip_list, 'SecurityIPList')
+        self.build_list_params(params, pay_type, 'PayType')
+        if client_token:
+            self.build_list_params(params, client_token, 'ClientToken')
+        if alicloud_zone:
+            self.build_list_params(params, alicloud_zone, 'ZoneId')
+        if db_instance_description:
             self.build_list_params(params, instance_description, 'DBInstanceDescription')
-        if security_ip_list:
-            self.build_list_params(params, security_ip_list, 'SecurityIPList')
-        if pay_type:
-            self.build_list_params(params, pay_type, 'PayType')
         if period:
             self.build_list_params(params, period, 'Period')
         if used_time:
@@ -151,339 +116,276 @@ class RDSConnection(ACSQueryConnection):
             self.build_list_params(params, vswitch_id, 'VSwitchId')
         if private_ip_address:
             self.build_list_params(params, private_ip_address, 'PrivateIpAddress')
-        try:
-            results_instance = self.get_status('CreateDBInstance', params)
-            if results_instance:
-                results.append({"DBInstanceId": results_instance["DBInstanceId"]})
-            changed = True
-        except Exception as ex:
-            custom_msg = [
-                "The API is showing None error code and error message while creating rds instance",
-                "Following error occur while creating rds instance: ",
-                "Failed to create rds instance with error code "
-            ]
-            results = results + self.rds_error_handler(ex, custom_msg)
-
-        else:          
-            time.sleep(240)
-            # Start newly created Instance
-            # wait until instance status becomes running         
-            if allocate_public_ip and self.check_instance_status(results_instance[u'DBInstanceId']):
-                if connection_string_prefix and public_port:
-                    if instance_net_type == "Intranet":
-                        changed_conn_str, result_conn_str = \
-                            self.create_instance_public_connection_string(results_instance[u'DBInstanceId'],
-                                                                          connection_string_prefix, public_port)
-                    elif instance_net_type == "Internet":
-                        changed_conn_str, result_conn_str = \
-                            self.modify_instance_public_connection(results_instance[u'DBInstanceId'], 
-                                                                   results_instance[u'ConnectionString'],
-                                                                   connection_string_prefix, public_port)
-            
-                    if 'error' in (''.join(str(result_conn_str))).lower():
-                        results.append(result_conn_str)
-                           
-            if self.check_instance_status(results_instance[u'DBInstanceId']):
-                if db_name or character_set_name: 
-                    changed_create_db, result_create_db = self.create_database(results_instance[u'DBInstanceId'],
-                                                                               db_name, db_description,
-                                                                               character_set_name)
-            
-                    if 'error' in (''.join(str(result_create_db))).lower():
-                        results.append(result_create_db)                      
-              
-            if maint_window and self.check_instance_status(results_instance[u'DBInstanceId']):
-                changed_maint_window, result_maint_window = \
-                    self.modify_db_instance_maint_time(results_instance[u'DBInstanceId']
-                                                            , maint_window)
-                if 'error' in (''.join(str(result_maint_window))).lower():
-                    results.append(result_maint_window) 
-            
-            if preferred_backup_time and preferred_backup_period:               
-                if self.check_instance_status(results_instance[u'DBInstanceId']):
-                    changed_backup_policy, result_backup_policy = \
-                        self.modify_backup_policy(results_instance[u'DBInstanceId'],
-                                                  preferred_backup_time, preferred_backup_period,
-                                                  backup_retention_period)
-                    if 'error' in (''.join(str(result_backup_policy))).lower():
-                        results.append(result_backup_policy) 
-               
-            if db_tags:
-                changed_tags, result_db_tags = self.bind_tags(results_instance[u'DBInstanceId'], db_tags) 
-                if 'error' in (''.join(str(result_db_tags))).lower():
-                    results.append(result_db_tags)                                    
-
-            if str(wait).lower() in ['yes', 'true'] and wait_timeout:
-                time.sleep(wait_timeout)
-
-        return changed, results
-
-    def create_rds_read_only_instance(self, source_instance, zone, engine_version, db_instance_class,
-                                      db_instance_storage, instance_description, pay_type, instance_network_type=None,
-                                      vpc_id=None, vswitch_id=None, private_ip_address=None):
+        res = self.get_object('CreateDBInstance', params, Instance)
+        if res:
+            if self.wait_for_instance_status(res.dbinstance_id):
+                result = self.describe_db_instance_attribute(res.dbinstance_id)
+        return result
+    
+    def reconstruct_current_instance(self, current_instance_info):
+        if not current_instance_info:
+            return None
+        if len(current_instance_info.items['dbinstance_attribute']) != 1:
+            return None
+        i = current_instance_info.items['dbinstance_attribute'][0]
+        for k, v in i.items():
+            setattr(current_instance_info, k, v)
+        delattr(current_instance_info, 'items')
+        return current_instance_info
+    
+    def wait_for_instance_status(self, db_instance_id, delay_time = 3, timeout = 600, state = "Running"):
         """
-        Create RDS Read-Only Instance
-
-        :type source_instance: string
-        :param source_instance: ID of the database to replicate.
-        :type zone: string
-        :param zone:  ID of a zone to which an instance belongs
-        :type engine_version: string
-        :param engine_version: Version number of the database engine to use
-        :type db_instance_class: string
-        :param db_instance_class: The instance type of the database.
-        :type db_instance_storage: integer
-        :param db_instance_storage: Size in gigabytes of the initial storage for the DB instance.
-        :type instance_description: string
-        :param instance_description: Instance description or remarks, no more than 256 bytes.
-        :type pay_type: string
-        :param pay_type: The pay type of the DB instance.
-        :type instance_network_type: string
-        :param instance_network_type: The network type of the instance.
-        :type vpc_id: string
-        :param vpc_id: The ID of the VPC
-        :type vswitch_id: string
-        :param vswitch_id: ID of VSwitch
-        :type private_ip_address: string
-        :param private_ip_address: IP address of an VPC under VSwitchId.
+        Wait for account status
+        :type db_instance_id: int
+        :param db_instance_id: The request time interval
+        :type delay_time: int
+        :param delay_time: The request time interval
+        :type timeout: int
+        :param timeout: overtime time
+        :type state: str
+        :param state: Expected state
+        :return: Bool
+        """
+        result = False
+        assert(delay_time < timeout)
+        res = None
+        runing_time = 0
+        result = False
+        while runing_time < timeout:
+            res = self.describe_db_instance_attribute(db_instance_id)
+            if not hasattr(res, 'dbinstance_status'):
+                runing_time = runing_time + delay_time
+                time.sleep(delay_time)    
+                continue
+            if res.dbinstance_status == state:
+                result = True
+                break
+            runing_time = runing_time + delay_time
+            time.sleep(delay_time)    
+        return result
+    
+    def describe_db_instance_attribute(self, db_instance_id):
+        """
+        Get RDS Instance Info
+        :type db_instance_id: string
+        :param db_instance_id: Id of instance
         :return:
-            changed: If ready-only instance is created successfully the changed will be set to True else False
             result: detailed server response
         """
         params = {}
-        results = []
-        changed = False
+        self.build_list_params(params, db_instance_id, 'DBInstanceId')
+        res = self.get_object('DescribeDBInstanceAttribute', params, Instance)
+        return self.reconstruct_current_instance(res)
 
-        if zone:
-            self.build_list_params(params, zone, 'ZoneId')
-        if source_instance:
-            self.build_list_params(params, source_instance, 'DBInstanceId')
-        if engine_version:
-            self.build_list_params(params, engine_version, 'EngineVersion')
+    def list_rds_instances(self, engine=None,
+                           db_instance_type=None,
+                           instance_network_type=None,
+                           connection_mode=None,
+                           tags=None,
+                           page_size=None,
+                           page_number=None):
+
+        params = {}
+        if engine:
+            self.build_list_params(params, engine, 'Engine')
+        if db_instance_type:
+            self.build_list_params(params, db_instance_type, 'DBInstanceId')
+        if instance_network_type:
+            self.build_list_params(params, instance_network_type, 'InstanceNetworkType')
+        if connection_mode:
+            self.build_list_params(params, connection_mode, 'ConnectionMode')
+        if tags:
+            self.build_list_params(params, tags, 'Tags')
+        if page_size:
+            self.build_list_params(params, page_size, 'PageSize')
+        if page_number:
+            self.build_list_params(params, page_number, 'PageNumber')
+        return self.get_list('DescribeDBInstances', params, ['DBInstance', Instance])            
+  
+    def modify_instance_specification(self, db_instance_id, pay_type, db_instance_class=None, db_intance_storage=None):
+        """
+        Change the instance specification
+        :type  db_instance_id: string
+        :param db_instance_id: Id of the Instance to change
+        :type  pay_type: string
+        :param pay_type: Postpaid
+        :type  db_instance_class: string
+        :param db_instance_class: database instance class
+        :type  db_intance_storage: integer
+        :param db_intance_storage: Customize storage space
+        :return bool
+        """
+        params = {}
+        self.build_list_params(params, db_instance_id, 'DBInstanceId')
+        self.build_list_params(params, pay_type, 'PayType')
         if db_instance_class:
             self.build_list_params(params, db_instance_class, 'DBInstanceClass')
         if db_instance_storage:
             self.build_list_params(params, db_instance_storage, 'DBInstanceStorage')
-        if instance_description:
-            self.build_list_params(params, instance_description, 'DBInstanceDescription')
-        if pay_type:
-            self.build_list_params(params, pay_type, 'PayType')
-        if instance_network_type:
-            self.build_list_params(params, instance_network_type, 'InstanceNetworkType')
-        if vpc_id:
-            self.build_list_params(params, vpc_id, 'VPCId')
-        if vswitch_id:
-            self.build_list_params(params, vswitch_id, 'VSwitchId')
-        if private_ip_address:
-            self.build_list_params(params, private_ip_address, 'PrivateIpAddress')
-        try:
-            results = self.get_status('CreateReadOnlyDBInstance', params)
-            changed = True
-        except Exception as ex:
-            error_code = str(ex.error_code)
-            error_msg = str(ex.message)
-            results.append({"Error Code": error_code, "Error Message": error_msg})
-
-        return changed, results
-
-    def get_rds_instances_info(self, instance_id):
+        self.get_status('ModifyDBInstanceSpe', params)
+        return self.wait_for_instance_status(db_instance_id)
+    
+    def modify_instance_billing_method(self, db_instance_id, pay_type, period=None, used_time=None):
         """
-        Get RDS Instance Info
-        :type instance_id: string
-        :param instance_id: Id of instance
-        :return:
-            result: detailed server response
-        """
-        params = {}
-        results = []
-        changed = False
-        
-        if instance_id:
-            self.build_list_params(params, instance_id, 'DBInstanceId')
-             
-        try:
-            results = self.get_status('DescribeDBInstances', params)            
-        except Exception as ex:
-            error_code = str(ex.error_code)
-            error_msg = str(ex.message)
-            results.append({"Error Code": error_code, "Error Message": error_msg})
-
-        return changed, results
-
-    def modify_rds_instance(self, instance_id, current_connection_string, connection_string_prefix, port,
-                            connection_mode, db_instance_class, db_instance_storage, pay_type, instance_description,
-                            security_ip_list, instance_network_type, vpc_id, vswitch_id, maint_window,
-                            preferred_backup_time, preferred_backup_period, backup_retention_period):
-        """
-        Modify RDS Instance
-
-        :type  instance_id: string
-        :param instance_id: Id of the Instance to modify
-        :type  current_connection_string: string
-        :param current_connection_string: Current connection string of an instance.
-        :type  connection_string_prefix: string
-        :param connection_string_prefix: Target connection string
-        :type  port: integer
-        :param port: Target port
-        :type  connection_mode: string
-        :param connection_mode: Connection mode of the RDS Instance
-        :type  db_instance_class: string
-        :param db_instance_class: The instance type of the database
-        :type  db_instance_storage: integer
-        :param db_instance_storage: Size in gigabytes of the DB instance to change
+        Change the instance billing method
+        :type  db_instance_id: string
+        :param db_instance_id: Id of the Instance to change
         :type  pay_type: string
-        :param pay_type: The pay type of the DB instance.
-        :type  instance_description: string
-        :param instance_description: Instance description or remarks, no more than 256 bytes
-        :type  security_ip_list: string
-        :param security_ip_list: List of IP addresses allowed to access all databases of an instance
-        :type  instance_network_type: string
-        :param instance_network_type: The network type of the instance.
-        :type  vpc_id: string
-        :param vpc_id: The ID of the VPC.
-        :type  vswitch_id: string
-        :param vswitch_id: ID of VSwitch
-        :type  maint_window: string
-        :param maint_window: Maintenance window in format of ddd:hh24:mi-ddd:hh24:mi.
-        :type  preferred_backup_time: string
-        :param preferred_backup_time: Backup time, in the format ofHH:mmZ- HH:mm Z.
-        :type  preferred_backup_period: string
-        :param preferred_backup_period: Backup period
-        :type  backup_retention_period: integer
-        :param backup_retention_period: Retention days of the backup
-        :return:
-            changed: If instance is modified successfully. the changed para will be set to True else False
-            result: detailed server response
+        :param pay_type: Postpaid
+        :type  period: string
+        :param period: Type of payment
+        :type  used_time: string
+        :param used_time: Renewal time.
+        :return bool
         """
         params = {}
-        results = []
-        changed = False
-        perform_flag = True               
-        try:
-            instance_status = "Stopped"
-            while instance_status == "Stopped":
-                try:
-                    instance_info = self.get_rds_instances_info(instance_id)
-                    if instance_info:
-                        if int(instance_info[1][u'TotalRecordCount']) == 1:
-                            instance_status = "Present"
-                            break
-                        else:
-                            perform_flag = False
-                            results.append({"Error Message": "Instance not found in specified region"})
-                            break
-
-                except Exception as ex:
-                    instance_status = "Stopped" 
-            if perform_flag:    
-                if self.check_instance_status(instance_id):
-                    changed_inst_type, result_inst_type = self.change_rds_instance_type(instance_id, db_instance_class,
-                                                                                        db_instance_storage, pay_type)
-                    if result_inst_type:
-                        results.append(result_inst_type)
-                    
-                    if 'error' not in (''.join(str(result_inst_type))).lower():
-                        changed = True
-                    time.sleep(60)                                                                   
-
-                if self.check_instance_status(instance_id):                                  
-                    changed_security_ip, result_security_ip =\
-                        self.modify_rds_instance_security_ip_list(instance_id, security_ip_list)
-
-                    if 'error' in (''.join(str(result_security_ip))).lower():
-                        results.append(result_security_ip)
-                    else:
-                        changed = True                      
-                                 
-                if preferred_backup_time and preferred_backup_period:
-                    if self.check_instance_status(instance_id):        
-                        changed_backup_policy, result_backup_policy = \
-                            self.modify_backup_policy(instance_id, preferred_backup_time, preferred_backup_period,
-                                                      backup_retention_period)
-                        if 'error' in (''.join(str(result_backup_policy))).lower():
-                            results.append(result_backup_policy)
-                        else:
-                            changed = True       
-                                             
-                if maint_window:
-                    if self.check_instance_status(instance_id):     
-                        changed_maint_time, result_maint_time = self.modify_db_instance_maint_time(instance_id,
-                                                                                                   maint_window)
-                        if 'error' in (''.join(str(result_maint_time))).lower():
-                            results.append(result_maint_time)
-                        else:
-                            changed = True  
-                                  
-                if connection_mode:
-                    if self.check_instance_status(instance_id):
-                        changed_conn_mode, result_conn_mode = self.modify_rds_instance_access_mode(instance_id,
-                                                                                                   connection_mode)
-                    if 'error' in (''.join(str(result_conn_mode))).lower():
-                        results.append(result_conn_mode)
-                    else:
-                        changed = True  
-                    time.sleep(5)
-
-                if instance_description:
-                    if self.check_instance_status(instance_id):
-                        changed_inst_desc, result_inst_desc = self.modify_rds_instance_description(instance_id,
-                                                                                                   instance_description)
-                        if 'error' in (''.join(str(result_inst_desc))).lower():
-                            results.append(result_inst_desc)
-                        else:
-                            changed = True           
-                              
-                if current_connection_string:    
-                    if self.check_instance_status(instance_id) and connection_string_prefix and port:                          
-                        changed_public_conn, result_public_conn = \
-                            self.modify_instance_public_connection(instance_id, current_connection_string,
-                                                                   connection_string_prefix, port)
-            
-                        if 'error' in (''.join(str(result_public_conn))).lower():
-                            results.append(result_public_conn)                          
-                        else:
-                            changed = True                       
-                        time.sleep(5)    
-                                       
-                if instance_network_type and self.check_instance_status(instance_id):   
-                    changed_net_type, result_net_type = self.modify_rds_instance_network_type(instance_id,
-                                                                                              instance_network_type,
-                                                                                              vpc_id, vswitch_id)
-                    if 'error' in (''.join(str(result_net_type))).lower():
-                        results.append(result_net_type)                        
-                    else:
-                        changed = True                      
-
-        except Exception as ex:
-            error_code = str(ex.error_code)
-            error_msg = str(ex.message)
-            results.append({"Error Code": error_code, "Error Message": error_msg})
-
-        return changed, results
-
-    def check_instance_status(self, instance_id):
+        self.build_list_params(params, db_instance_id, 'DBInstanceId')
+        self.build_list_params(params, pay_type, 'PayType')
+        if period:
+            self.build_list_params(params, period, 'Period')
+        if used_time:
+            self.build_list_params(params, used_time, 'UsedTime')
+        self.get_status('ModifyDBInstancePayType', params)
+        return self.wait_for_instance_status(db_instance_id)
+    
+    def modify_instance_auto_renewal_attribute(self, db_instance_id, auto_renew, duration=None):
         """
-        Check RDS Instance Status
+        Change the instance billing method
+        :type  db_instance_id: string
+        :param db_instance_id: Id of the Instance to change
+        :type  duration: string
+        :param duration: Instance automatic renewal
+        :type  auto_renew: string
+        :param auto_renew: Whether to open automatic renewal
+        :return bool
+        """
+        params = {}
+        self.build_list_params(params, db_instance_id, 'DBInstanceId')
+        self.build_list_params(params, auto_renew, 'AutoRenew')
+        if duration:
+            self.build_list_params(params, duration, 'Duration')
+        self.get_status('ModifyInstanceAutoRenewalAttribute', params)
+        return self.wait_for_instance_status(db_instance_id)
+    
+    def allocate_instance_public_connection_string(self, db_instance_id, public_connection_string_prefix, port):
+        """
+        Create Instance Public Connection String
+
+        :type db_instance_id: string
+        :param db_instance_id: Id of instances to change
+        :type public_connection_string_prefix: string
+        :param public_connection_string_prefix: Prefix of an Internet connection string
+        :type public_port: integer
+        :param public_port: The public connection port.
+        :return: bool
+        """
+        params = {}
         
-        :type  instance_id: string
-        :param instance_id: Id of the Instance to modify
-        :return: return true if instance status is running else false
+        self.build_list_params(params, db_instance_id, 'DBInstanceId')
+        self.build_list_params(params, public_connection_string_prefix, 'ConnectionStringPrefix')
+        self.build_list_params(params, port, 'Port')
+        self.get_status('AllocateInstancePublicConnection', params)
+        return self.wait_for_instance_status(db_instance_id)
+
+    def release_instance_public_connection_string(self, db_instance_id, current_connection_string):
         """
-        status_flag = False
-        instance_status = "Stopped"
-        while instance_status == "Stopped":
-            try:
-                instance_info = self.get_rds_instances_info(instance_id)
-                if instance_info:    
-                    if instance_info[1][u'Items'][u'DBInstance'][0][u'DBInstanceStatus'] \
-                            in ['running', 'Running']:
-                        instance_status = instance_info[1][u'Items'][u'DBInstance'][0][u'DBInstanceStatus']
-                        status_flag = True
-                    else:
-                        time.sleep(15)                           
-            except Exception as ex:
-                instance_status = "Stopped"           
-        return status_flag
+        release instance public connection string
+
+        :type db_instance_id: string
+        :param db_instance_id: Id of instances to change
+        :type current_connection_string: string
+        :param current_connection_string: Prefix of a public internet connection string
+        :return: bool
+        """
+        params = {}
+        
+        self.build_list_params(params, db_instance_id, 'DBInstanceId')
+        self.build_list_params(params, current_connection_string, 'CurrentConnectionString')
+        self.get_status('ReleaseInstancePublicConnection', params)
+        return self.wait_for_instance_status(db_instance_id)
+    
+    def allocate_instacne_private_connection_string(self, db_instance_id, private_connection_string_prefix, port=None):
+        """
+        allocate instance privae connection string
+
+        :type db_instance_id: string
+        :param db_instance_id: Id of instances to change
+        :type private_connection_string_prefix: string
+        :param private_connection_string_prefix: private internet connection string
+        :return: bool
+        """
+        params = {}
+        self.build_list_params(params, db_instance_id, 'DBInstanceId')
+        self.build_list_params(params, private_connection_string_prefix, 'ConnectionStringPrefix')
+        if port:
+            self.build_list_params(params, port, 'Port')
+        self.get_status('SwitchDBInstanceNetType', params)
+        return self.wait_for_instance_status(db_instance_id)
+    
+    def list_instance_connection_strings(self, db_instance_id, connection_string_type=None):
+        """
+        list instance connection strings
+        
+        :type db_instance_id: string
+        :param db_instance_id: Id of instances to change
+        :type connection_string_type: string
+        :param connection_string_type: type of connection string
+        :return: bool
+        """
+        params = {}
+        self.build_list_params(params, db_instance_id, 'DBInstanceId')
+        if connection_string_type:
+            self.build_list_params(params, connection_string_type, 'ConnectionStringType')
+        return self.get_status('DescribeDBInstanceNetInfo', params)
+    
+    def modify_instance_connection_string(self, db_instance_id, current_connection_string, connection_string_prefix=None, port=None):
+        """
+        modeify instance connection string
+        
+        :type db_instance_id: string
+        :param db_instance_id: Id of instances to change
+        :type current_connection_string: string
+        :param current_connection_string: current connection string
+        :type connection_string_prefix: string
+        :param connection_string_prefix: dest connection string
+        :type port: string
+        :param port: dest port
+        :return: bool
+        """
+        params = {}
+        self.build_list_params(params, db_instance_id, 'DBInstanceId')
+        self.build_list_params(params, current_connection_string, 'CurrentConnectionString')
+        if connection_string_prefix:
+            self.build_list_params(params, connection_string_prefix, 'ConnectionStringPrefix')
+        if port:
+            self.build_list_params(params, port, 'Port')
+        self.get_status('ModifyDBInstanceConnectionString', params)
+        return self.wait_for_instance_status(db_instance_id)
+    
+    def restart_rds_instance(self, db_instance_id):
+        """
+        Restart rds instance
+        
+        :type instance_id: str
+        :param instance_id: Id of instances to reboot
+        :return: bool
+        """
+        params = {}
+        self.build_list_params(params, db_instance_id, 'DBInstanceId')
+        self.get_status('RestartDBInstance', params)
+        return self.wait_for_instance_status(db_instance_id)
+
+    def release_rds_instance(self, db_instance_id):
+        """
+        Release rds instance
+        
+        :type instance_id: str
+        :param instance_id: Id of instances to remove
+        :return: bool
+        """
+        params = {}        
+        self.build_list_params(params, db_instance_id, 'DBInstanceId') 
+        return self.get_status('DeleteDBInstance', params)
 
     def change_rds_instance_type(self, instance_id, db_instance_class, db_instance_storage, pay_type):
         """
@@ -699,93 +601,6 @@ class RDSConnection(ACSQueryConnection):
 
         return changed, results
 
-    def create_instance_public_connection_string(self, db_instance_id, public_connection_string_prefix, public_port):
-        """
-        Create Instance Public Connection String
-
-        :type db_instance_id: string
-        :param db_instance_id: Id of instances to change
-        :type public_connection_string_prefix: string
-        :param public_connection_string_prefix: Prefix of an Internet connection string
-        :type public_port: integer
-        :param public_port: The public connection port.
-        :return:
-            changed: If instance public connection string created successfully.The changed para will be set to True else
-            False
-            result: detailed server response
-        """
-        params = {}
-        results = []
-        changed = False
-        
-        if db_instance_id:
-            self.build_list_params(params, db_instance_id, 'DBInstanceId')
-        if public_connection_string_prefix:
-            self.build_list_params(params, public_connection_string_prefix, 'ConnectionStringPrefix')
-        if public_port:
-            self.build_list_params(params, public_port, 'Port')
-        try:
-            results = self.get_status('AllocateInstancePublicConnection', params)
-            changed = True
-        except Exception as ex:
-            if (ex.args is None) or (ex.args == "need more than 2 values to unpack") \
-                    or (ex.message == "need more than 2 values to unpack") or ex.error_code is None:
-                results.append({"Error Message": "The API is showing None error code and error message"
-                                                 " while creating public connection string "})
-            else:
-                error_code = ex.error_code
-                error_msg = ex.message
-                results.append("Failed to create public connection string with error code " + error_code +
-                               " and message: " + error_msg)
-
-        return changed, results
-
-    def modify_instance_public_connection(self, db_instance_id, current_connection_string,
-                                          connection_string_prefix, port):
-        """
-        Modify Instance Public connection string
-
-        :type db_instance_id: string
-        :param db_instance_id: Id of instances to change
-        :type current_connection_string: string
-        :param current_connection_string: Current connection string of an instance.
-        :type connection_string_prefix: string
-        :param connection_string_prefix: Prefix of an Internet connection string
-        :type port: integer
-        :param port: The public connection port.
-        :return:
-            changed: If instance public connection string modified successfully.The changed para will
-             be set to True else False
-            result: detailed server response
-        """
-        params = {}
-        results = []
-        changed = False
-        
-        if db_instance_id:
-            self.build_list_params(params, db_instance_id, 'DBInstanceId')
-        if current_connection_string:
-            self.build_list_params(params, current_connection_string, 'CurrentConnectionString')
-        if connection_string_prefix:
-            self.build_list_params(params, connection_string_prefix, 'ConnectionStringPrefix')
-        if port:
-            self.build_list_params(params, port, 'Port')
-        try:
-            results = self.get_status('ModifyDBInstanceConnectionString', params)
-            changed = True
-        except Exception as ex:
-            if (ex.args is None) or (ex.args == "need more than 2 values to unpack") \
-                    or (ex.message == "need more than 2 values to unpack") or ex.error_code is None:
-                results.append({"Error Message": "The API is showing None error code and error message"
-                                                 " while modifying public connection string "})
-            else:
-                error_code = ex.error_code
-                error_msg = ex.message
-                results.append("Failed to modify public connection string with error code " + error_code +
-                               " and message: " + error_msg)
-
-        return changed, results
-
     def modify_db_instance_maint_time(self, instance_id, maint_window):
         """
         Modify Instance Maintenance Time
@@ -982,101 +797,6 @@ class RDSConnection(ACSQueryConnection):
                 error_code = ex.error_code
                 error_msg = ex.message
                 results.append({"Error Code": error_code, "Error Message": error_msg})
-
-        return changed, results
-    
-    def reset_instance_password(self, db_instance_id, account_name, account_password):
-        """
-        Reset instance password
-        :type db_instance_id: str
-        :param db_instance_id: Id of instance
-        :type account_name: str
-        :param account_name: Name of an account
-        :type account_password: str
-        :param account_password: A new password. It may consist of letters, numbers, or underlines,
-        with a length of 6 to 32 characters
-        :return: Result dict of operation
-        """
-        params = {}
-        results = []
-        changed = False
-        
-        if db_instance_id:
-            self.build_list_params(params, db_instance_id, 'DBInstanceId')
-
-        if account_name:
-            self.build_list_params(params, account_name, 'AccountName')
-
-        if account_password:
-            self.build_list_params(params, account_password, 'AccountPassword')
-        
-        try:
-            response = self.get_status('ResetAccountPassword', params)
-            results.append(response)
-            changed = True
-        except Exception as ex:
-            if (ex.args is None) or (ex.args == "need more than 2 values to unpack") \
-                    or (ex.message == "need more than 2 values to unpack"):
-                results.append({"Error Message": "The API is showing None error code and error message"})
-            else:
-                error_code = ex.error_code
-                error_msg = ex.message
-                results.append({"Error Code": error_code, "Error Message": error_msg})
-
-        return changed, results
-
-    def restart_rds_instance(self, instance_id):
-        """
-        Restart rds instance
-        :type instance_id: str
-        :param instance_id: Id of instances to reboot
-        :return: Result dict of operation
-        """
-        params = {}
-        results = []
-        changed = False
-        
-        if instance_id:
-            self.build_list_params(params, instance_id, 'DBInstanceId')
-        
-        try:
-            response = self.get_status('RestartDBInstance', params)
-            results.append(response)
-            changed = True
-            time.sleep(120)
-        except Exception as ex:
-            if (ex.args is None) or (ex.args == "need more than 2 values to unpack") \
-                    or (ex.message == "need more than 2 values to unpack"):
-                results.append({"Error Message": "The API is showing None error code and error message"})
-            else:
-                error_code = ex.error_code
-                error_msg = ex.message
-                results.append({"Error Code": error_code, "Error Message": error_msg})
-
-        return changed, results
-
-    def release_rds_instance(self, instance_id):
-        """
-        Release rds instance
-        :type instance_id: str
-        :param instance_id: Id of instances to remove
-        :return: Result dict of operation
-        """
-        params = {}
-        results = []
-        changed = False
-        
-        if instance_id:
-            self.build_list_params(params, instance_id, 'DBInstanceId')
-        
-        try:
-            response = self.get_status('DeleteDBInstance', params)
-            results.append(response)
-            changed = True
-        except Exception as ex:
-            error_code = str(ex.error_code)
-            error_msg = str(ex.message)
-            results.append({"Error Code": error_code, "Error Message": error_msg})
 
         return changed, results
     
