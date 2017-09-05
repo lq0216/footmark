@@ -11,7 +11,7 @@ import json
 
 from footmark.connection import ACSQueryConnection
 from footmark.rds.regioninfo import RegionInfo
-from footmark.rds.rds import Account
+from footmark.rds.rds import Account, Database
 from footmark.resultset import ResultSet
 from footmark.exception import RDSResponseError
 
@@ -911,79 +911,111 @@ class RDSConnection(ACSQueryConnection):
 
         return changed, results
 
-    def create_database(self, instance_id, db_name, db_description, character_set_name):
+    def create_database(self, instance_id, name, description, character_set_name):
         """
         Creates a new database in an instance
         :type instance_id: str
         :param instance_id: Id of instances
-        :type db_name: str
-        :param db_name: Name of a database to create within the instance.  If not specified, then no database is created
-        :type db_description: str
-        :param db_description: Description of a database to create within the instance.  If not specified,
+        :type name: str
+        :param name: Name of a database to create within the instance.  If not specified, then no database is created
+        :type description: str
+        :param description: Description of a database to create within the instance.  If not specified,
         then no database is created.
         :type character_set_name: str
         :param character_set_name: Associate the DB instance with a specified character set.
         :return: Result dict of operation
         """
         params = {}
-        results = []
-        changed = False
         
-        if instance_id:
-            self.build_list_params(params, instance_id, 'DBInstanceId')
-        if db_name:
-            self.build_list_params(params, db_name, 'DBName')
-        if character_set_name:
-            self.build_list_params(params, character_set_name, 'CharacterSetName')
-        if db_description:
-            self.build_list_params(params, db_description, 'DBDescription')
-        
-        try:
-            response = self.get_status('CreateDatabase', params)
-            results.append(response)
-            changed = True
-        except Exception as ex:
-            if (ex.args is None) or (ex.args == "need more than 2 values to unpack") \
-                    or (ex.message == "need more than 2 values to unpack"):
-                results.append({"Error Message": "The API is showing None error code and error message"})
-            else:
-                error_code = ex.error_code
-                error_msg = ex.message
-                results.append({"Error Code": error_code, "Error Message": error_msg})
+        self.build_list_params(params, instance_id, 'DBInstanceId')
+        self.build_list_params(params, name, 'DBName')
+        self.build_list_params(params, character_set_name, 'CharacterSetName')
+        if description:
+            self.build_list_params(params, description, 'DBDescription')
+        self.get_status('CreateDatabase', params)
+        if self.wait_for_database_status(instance_id, name):
+            return self.list_databases(instance_id, name)[0]
+        return None
 
-        return changed, results
-
-    def delete_database(self, instance_id, db_name):
+    def delete_database(self, instance_id, name):
         """
         Delete database
         :type instance_id: str
         :param instance_id: Id of instances
-        :type db_name: str
-        :param db_name: Name of a database to delete within the instance. If not specified, then no database is deleted
-        :return: Result dict of operation
+        :type name: str
+        :param name: Name of a database to delete within the instance. If not specified, then no database is deleted
+        :return: bool
         """
         params = {}
-        results = []
-        changed = False
         
-        if instance_id:
-            self.build_list_params(params, instance_id, 'DBInstanceId')
-        if db_name:
-            self.build_list_params(params, db_name, 'DBName')
-        try:
-            response = self.get_status('DeleteDatabase', params)
-            results.append(response)
-            changed = True
-        except Exception as ex:
-            if (ex.args is None) or (ex.args == "need more than 2 values to unpack") \
-                    or (ex.message == "need more than 2 values to unpack"):
-                results.append({"Error Message": "The API is showing None error code and error message"})
-            else:
-                error_code = ex.error_code
-                error_msg = ex.message
-                results.append({"Error Code": error_code, "Error Message": error_msg})
-
-        return changed, results
+        self.build_list_params(params, instance_id, 'DBInstanceId')
+        self.build_list_params(params, name, 'DBName')
+        return self.get_status('DeleteDatabase', params)
+    
+    def modify_db_description(self, instance_id, name, description):
+        """
+        Delete database
+        :type instance_id: str
+        :param instance_id: Id of instances
+        :type name: str
+        :param name: Name of a database to delete within the instance. If not specified, then no database is deleted
+        :type description: str
+        :param description: db Note
+        :return: bool
+        """
+        params = {}
+        
+        self.build_list_params(params, instance_id, 'DBInstanceId')
+        self.build_list_params(params, name, 'DBName')
+        self.build_list_params(params, description, 'DBDescription')
+        return self.get_status('ModifyDBDescription', params)
+    
+    def wait_for_database_status(self, instance_id, name, dely_time = 3, timeout = 60, state = "Running"):
+        """
+        Wait for database status
+        :type dely_time: int
+        :param dely_time: The request time interval
+        :type timeout: int
+        :param timeout: overtime time
+        :type state: str
+        :param state: Expected state
+        :return: Bool
+        """
+        assert(dely_time < timeout)
+        database_list = []
+        runing_time = 0
+        result = False
+        while runing_time < timeout:
+            database_list = self.list_databases(instance_id, name)
+            if len(account_list) != 1:
+                time.sleep(dely_time)
+                runing_time = runing_time + dely_time
+                continue
+            if database_list[0].dbstatus == state:
+                result = True
+                break
+            runing_time = runing_time + dely_time
+            time.sleep(dely_time)    
+        return result
+    
+    def list_databases(self, instance_id, name=None, status=None):
+        """
+        Delete database
+        :type instance_id: str
+        :param instance_id: Id of instances
+        :type name: str
+        :param name: Name of a database to delete within the instance. If not specified, then no database is deleted
+        :type description: str
+        :param description: db Note
+        :return: bool
+        """
+        params = {}
+        
+        self.build_list_params(params, instance_id, 'DBInstanceId')
+        self.build_list_params(params, name, 'DBName')
+        self.build_list_params(params, status, 'DBStatus')
+        return self.get_object('DescribeDatabases', params, ResultSet)
+        #return self.get_list('DescribeDatabases', params, ['Databases', Database])
     
     def reset_instance_password(self, db_instance_id, account_name, account_password):
         """

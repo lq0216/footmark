@@ -1,5 +1,35 @@
 from footmark.rds.rdsobject import TaggedRDSObject
 
+class Database(TaggedRDSObject):
+    def __init__(self, connection=None, owner_id=None,
+                 name=None, description=None, id=None):
+        super(Database, self).__init__(connection)
+        self.tags = {}
+
+    def __repr__(self):
+        return 'Database:%s' % self.name
+
+    def __getattr__(self, name):
+        if name == 'name':
+             return self.db_name
+
+    def __setattr__(self, name, value):
+        if name == 'name':
+             self.db_name=value
+        super(TaggedRDSObject, self).__setattr__(name, value)
+    
+    def modify_description(self, instance_id, description):
+        '''
+        modify
+        '''
+        return self.connection.modify_db_description(instance_id, self.db_name, description)
+    
+    def delete(self, instance_id):
+        '''
+        delete
+        '''
+        return self.connection.modify_db_description(instance_id, self.db_name)
+
 class Account(TaggedRDSObject):
     def __init__(self, connection=None, owner_id=None,
                  name=None, description=None, id=None):
